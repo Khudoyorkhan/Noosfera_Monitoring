@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <title>Noosfera hududining monitoringi</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <h1>Noosfera hududining monitoringi</h1>
+    <p>Environmental Monitoring System (EMS) •
+       Gidrofizik va gidrokimyoviy ko'rsatkichlar •
+       10 parametr</p>
+  </div>
+  <div class="operator">Operator: <b>Jamshidbek</b></div>
+</header>
+
+<main>
+  <section class="cards" id="parameters"></section>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>O'lchash natijalari</h2>
+      <p class="subtitle">
+        Environmental Monitoring Data Records
+      </p>
+
+      <div class="toolbar">
+        <input type="search" id="search"
+          placeholder="Sana yoki qiymat bo'yicha qidirish">
+        <button id="exportBtn">CSV eksport</button>
+        <button id="addBtn">Yangi o'lchov kiritish</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Timestamp</th>
+              <th>H (m)</th>
+              <th>S (ppt)</th>
+              <th>SM (%)</th>
+              <th>RH (%)</th>
+              <th>T (°C)</th>
+              <th>pH</th>
+              <th>EC (µS/cm)</th>
+              <th>TDS (mg/L)</th>
+              <th>ECe (dS/m)</th>
+              <th>ECs (µS/cm)</th>
+              <th>Data Quality</th>
+            </tr>
+          </thead>
+          <tbody id="results"></tbody>
+        </table>
+      </div>
+
+      <p id="recordCount" class="subtitle"></p>
+    </section>
+
+    <aside>
+      <section class="panel">
+        <h2>Qurilma tafsilotlari</h2>
+        <div class="detail">
+          <span>Device Status</span>
+          <strong class="offline">● OFFLINE</strong>
+        </div>
+        <div class="detail">
+          <span>Device Type</span>
+          <b>IoT Monitoring Node</b>
+        </div>
+        <div class="detail">
+          <span>Controller</span>
+          <b>ESP32</b>
+        </div>
+        <div class="detail">
+          <span>Parameters</span>
+          <b>10</b>
+        </div>
+        <div class="detail">
+          <span>Data Source</span>
+          <b>Simulated Data</b>
+        </div>
+        <div class="detail">
+          <span>Update Mode</span>
+          <b>Manual / API</b>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Monitoring holati</h2>
+        <p><span class="dot"></span> Demo ma'lumotlar</p>
+        <p>Data Quality: <b>SIMULATED</b></p>
+        <p>Monitoring Parameters: <b>10</b></p>
+        <p>Database: <b>Not Connected</b></p>
+      </section>
+
+      <section class="panel">
+        <h2>O'lchov birliklari</h2>
+        <p>m — metr</p>
+        <p>ppt — parts per thousand</p>
+        <p>µS/cm — microsiemens per centimeter</p>
+        <p>mg/L — milligrams per liter</p>
+        <p>dS/m — decisiemens per meter</p>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  Noosfera Monitoring System |
+  Environmental Data Dashboard |
+  Operator: Jamshidbek
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
