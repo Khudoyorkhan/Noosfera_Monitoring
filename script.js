@@ -1,75 +1,67 @@
 
 "use strict";
 
-// ========================================
+const API_URL = "./api/measurements.json";
+
 // 1. MONITORING PARAMETRLARI
-// ========================================
-
 const parameters = [
-  { uz: "Suv sathi", code: "H", unit: "m",
-    color: "#4aa3ce", max: 30 },
-  { uz: "Suvning sho'rlanishi", code: "S", unit: "ppt",
-    color: "#648df4", max: 5 },
-  { uz: "Tuproq namligi", code: "SM", unit: "%",
-    color: "#27c68b", max: 100 },
-  { uz: "Havo namligi", code: "RH", unit: "%",
-    color: "#50a8ae", max: 100 },
-  { uz: "Suv harorati", code: "T", unit: "°C",
-    color: "#f4a43b", max: 50 },
-  { uz: "Suvning pH ko'rsatkichi", code: "pH", unit: "pH",
-    color: "#9d7ad8", max: 14 },
-  { uz: "Suvning elektr o'tkazuvchanligi", code: "EC",
-    unit: "µS/cm", color: "#468ac1", max: 2000 },
-  { uz: "Umumiy erigan moddalar miqdori", code: "TDS",
-    unit: "mg/L", color: "#d6a047", max: 2000 },
-  { uz: "Tuproq sho'rlanishi", code: "ECe", unit: "dS/m",
-    color: "#d37da7", max: 10 },
-  { uz: "Tuproq elektr o'tkazuvchanligi", code: "ECs",
-    unit: "µS/cm", color: "#77945b", max: 2000 }
+  { uz: "Suv sathi", code: "H", unit: "m", color: "#4aa3ce", max: 30 },
+  { uz: "Suvning sho'rlanishi", code: "S", unit: "ppt", color: "#648df4", max: 5 },
+  { uz: "Tuproq namligi", code: "SM", unit: "%", color: "#27c68b", max: 100 },
+  { uz: "Havo namligi", code: "RH", unit: "%", color: "#50a8ae", max: 100 },
+  { uz: "Suv harorati", code: "T", unit: "°C", color: "#f4a43b", max: 50 },
+  { uz: "Suvning pH ko'rsatkichi", code: "pH", unit: "pH", color: "#9d7ad8", max: 14 },
+  { uz: "Suvning elektr o'tkazuvchanligi", code: "EC", unit: "µS/cm", color: "#468ac1", max: 2000 },
+  { uz: "Umumiy erigan moddalar miqdori", code: "TDS", unit: "mg/L", color: "#d6a047", max: 2000 },
+  { uz: "Tuproq sho'rlanishi", code: "ECe", unit: "dS/m", color: "#d37da7", max: 10 },
+  { uz: "Tuproq elektr o'tkazuvchanligi", code: "ECs", unit: "µS/cm", color: "#77945b", max: 2000 }
 ];
 
-// ========================================
-// 2. BOSHLANG'ICH DEMO MA'LUMOTLAR
-// ========================================
+// 2. JSON MANBASI VA O'LCHOVLAR
+const MAX_RECORDS = 200;
+const POLL_INTERVAL_MS = 10000;
 
-const initialValues = [
-  [18.6, 0.51, 32.2, 57.6, 14.8, 6.66, 783.9, 505.9, 1.31, 418.5],
-  [18.4, 0.50, 32.4, 58.3, 14.9, 6.62, 775, 502.5, 1.32, 423.3],
-  [18.3, 0.50, 32.3, 58.7, 15.1, 6.66, 770.6, 496.8, 1.31, 425],
-  [18.3, 0.49, 31.9, 58.5, 15.2, 6.73, 774.9, 494, 1.29, 422.1],
-  [18.2, 0.49, 31.8, 59.1, 15.3, 6.70, 768.2, 491.5, 1.28, 420.4],
-  [18.1, 0.48, 31.7, 59.4, 15.4, 6.68, 762.4, 487.2, 1.27, 417.8],
-  [18.0, 0.48, 31.5, 59.8, 15.5, 6.71, 758.1, 484.6, 1.26, 415.2],
-  [17.9, 0.47, 31.4, 60.1, 15.6, 6.69, 751.7, 480.3, 1.25, 412.6],
-  [17.8, 0.47, 31.2, 60.4, 15.7, 6.72, 746.3, 477.1, 1.24, 409.9],
-  [17.7, 0.46, 31.0, 60.8, 15.8, 6.74, 740.8, 473.4, 1.23, 407.5]
-];
+let records = [];
+let pollingEnabled = true;
+let lastFetchAt = null;
 
 function formatDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "Noma'lum";
+  }
+
   const pad = n => String(n).padStart(2, "0");
 
-  return (
-    `${date.getFullYear()}-` +
-    `${pad(date.getMonth() + 1)}-` +
-    `${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:` +
-    `${pad(date.getMinutes())}:` +
-    `${pad(date.getSeconds())}`
-  );
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-const now = Date.now();
+function normalizeMeasurement(item) {
+  if (!item || typeof item !== "object") return null;
 
-let records = initialValues.map((values, index) => ({
-  time: formatDate(new Date(now - index * 3600000)),
-  values: [...values],
-  source: "DEMO"
-}));
+  const date = new Date(item.timestamp);
+  if (Number.isNaN(date.getTime())) return null;
 
-// ========================================
+  const values = parameters.map(p => Number(item[p.code]));
+
+  if (
+    values.some(v => !Number.isFinite(v) || v < 0) ||
+    values[5] > 14
+  ) {
+    return null;
+  }
+
+  return {
+    time: formatDate(date),
+    timestamp: date.getTime(),
+    values,
+    source: "JSON",
+    id: String(item.id || item.timestamp)
+  };
+}
+
 // 3. WATER QUALITY: 3 TA SINF
-// ========================================
-// Bu namunaviy qoida, laboratoriya xulosasi emas.
+// Bu namunaviy tasniflash qoidasi, laboratoriya xulosasi emas.
 
 function classifyWaterQuality(values) {
   const pH = values[5];
@@ -78,7 +70,9 @@ function classifyWaterQuality(values) {
   if (
     !Number.isFinite(pH) ||
     !Number.isFinite(tds) ||
-    pH < 0 || pH > 14 || tds < 0
+    pH < 0 ||
+    pH > 14 ||
+    tds < 0
   ) {
     return "ANIQLANMADI";
   }
@@ -101,16 +95,23 @@ function qualityClass(quality) {
   return "quality-unknown";
 }
 
-// ========================================
 // 4. PARAMETR KARTOCHKALARI
-// ========================================
 
 function showCards() {
   const latest = records[0];
   const container = document.getElementById("parameters");
 
+  if (!container) return;
+
+  if (!latest) {
+    container.innerHTML =
+      '<div class="card">O‘lchov ma’lumotlari kutilmoqda...</div>';
+    return;
+  }
+
   container.innerHTML = parameters.map((p, i) => {
     const value = latest.values[i];
+
     const percent = Math.min(
       100,
       Math.max(0, value / p.max * 100)
@@ -135,12 +136,11 @@ function showCards() {
   }).join("");
 }
 
-// ========================================
 // 5. JADVAL
-// ========================================
 
 function showTable(filter = "") {
   const tbody = document.getElementById("results");
+  if (!tbody) return;
 
   const filtered = records
     .map((r, index) => ({
@@ -166,7 +166,9 @@ function showTable(filter = "") {
       <tr>
         <td>${r.number}</td>
         <td>${r.time}</td>
+
         ${r.values.map(v => `<td>${v}</td>`).join("")}
+
         <td>
           <span class="quality ${qualityClass(quality)}">
             ${quality}
@@ -184,14 +186,16 @@ function showTable(filter = "") {
     `;
   }
 
-  document.getElementById("recordCount").textContent =
-    `Jami: ${records.length} ta o'lchov. ` +
-    `Ko'rsatilmoqda: ${filtered.length} ta.`;
+  const count = document.getElementById("recordCount");
+
+  if (count) {
+    count.textContent =
+      `Jami: ${records.length} ta o'lchov. ` +
+      `Ko'rsatilmoqda: ${filtered.length} ta.`;
+  }
 }
 
-// ========================================
 // 6. QO'LDA O'LCHOV KIRITISH
-// ========================================
 
 function addMeasurement() {
   const values = [];
@@ -203,7 +207,7 @@ function addMeasurement() {
       `${p.uz} (${p.code})\n` +
       `O'lchov birligi: ${p.unit}\n` +
       `Yangi qiymatni kiriting:`,
-      records[0].values[i]
+      records[0]?.values[i] ?? ""
     );
 
     if (answer === null) return;
@@ -231,21 +235,23 @@ function addMeasurement() {
 
   records.unshift({
     time: formatDate(new Date()),
+    timestamp: Date.now(),
     values,
-    source: "MANUAL"
+    source: "MANUAL",
+    id: `manual-${Date.now()}`
   });
 
   if (records.length > MAX_RECORDS) {
     records.length = MAX_RECORDS;
   }
 
-  document.getElementById("search").value = "";
+  const search = document.getElementById("search");
+  if (search) search.value = "";
+
   updateDashboard();
 }
 
-// ========================================
 // 7. CSV EKSPORT
-// ========================================
 
 function exportCSV() {
   const headers = [
@@ -286,97 +292,39 @@ function exportCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// ========================================
-// 8. AVTOMATIK DEMO MONITORING
-// ========================================
+// 8. TASODIFIY DEMO MA'LUMOTLAR YARATILMAYDI
+// Ma'lumotlar JSON manbasidan yoki qo'lda kiritish orqali olinadi.
 
-const DEMO_INTERVAL_MS = 5000;
-const MAX_RECORDS = 200;
-
-let demoRunning = true;
-let nextTick = Date.now() + DEMO_INTERVAL_MS;
-
-const bounds = [
-  [15, 23],
-  [0.25, 1.3],
-  [20, 60],
-  [35, 85],
-  [8, 25],
-  [5.8, 8.6],
-  [400, 1400],
-  [240, 950],
-  [0.5, 3.8],
-  [250, 850]
-];
-
-const steps = [
-  0.06, 0.015, 0.5, 0.8, 0.12,
-  0.025, 9, 6, 0.03, 5
-];
-
-const decimals = [
-  2, 3, 1, 1, 2, 2, 1, 1, 2, 1
-];
-
-const referenceValues = [...records[0].values];
-
-function demoMeasurement() {
-  const previous = records[0].values;
-
-  const values = previous.map((old, i) => {
-    const [min, max] = bounds[i];
-
-    const variation =
-      (Math.random() - 0.5) * steps[i] * 2;
-
-    const drift =
-      (referenceValues[i] - old) * 0.012;
-
-    return Number(
-      Math.max(
-        min,
-        Math.min(max, old + variation + drift)
-      ).toFixed(decimals[i])
-    );
-  });
-
-  records.unshift({
-    time: formatDate(new Date()),
-    values,
-    source: "DEMO"
-  });
-
-  if (records.length > MAX_RECORDS) {
-    records.length = MAX_RECORDS;
-  }
-
-  updateDashboard();
-}
-
-// ========================================
-// 9. OGОHLANTIRISHLAR
-// ========================================
+// 9. OGOHLANTIRISHLAR
 
 function checkAlerts() {
+  const alertText = document.getElementById("alertText");
+  const alertBox = document.getElementById("alerts");
+
+  if (!records.length) {
+    if (alertText) {
+      alertText.textContent = "O‘lchov ma’lumotlari kutilmoqda.";
+    }
+    return;
+  }
+
   const values = records[0].values;
   const quality = classifyWaterQuality(values);
   const warnings = [];
 
   if (quality === "YOMON") {
-    warnings.push(
-      "Suv sifati YOMON sinfga tushdi."
-    );
+    warnings.push("Suv sifati YOMON sinfga tushdi.");
   }
 
   if (values[5] < 6.5 || values[5] > 8.5) {
     warnings.push(
-      `pH = ${values[5]}: demo chegaradan tashqarida.`
+      `pH = ${values[5]}: belgilangan chegaradan tashqarida.`
     );
   }
 
   if (values[7] > 1000) {
     warnings.push(
-      `TDS = ${values[7]} mg/L: demo chegaradan yuqori.`
+      `TDS = ${values[7]} mg/L: belgilangan chegaradan yuqori.`
     );
   }
 
@@ -386,41 +334,41 @@ function checkAlerts() {
     );
   }
 
-  const alertBox = document.getElementById("alerts");
-
-  document.getElementById("alertText").textContent =
-    warnings.length
+  if (alertText) {
+    alertText.textContent = warnings.length
       ? warnings.join(" ")
-      : "Namuna chegaralari bo'yicha ogohlantirish yo'q.";
+      : "Belgilangan chegaralar bo‘yicha ogohlantirish yo‘q.";
+  }
 
-  alertBox.classList.toggle(
-    "has-alert",
-    warnings.length > 0
-  );
+  if (alertBox) {
+    alertBox.classList.toggle("has-alert", warnings.length > 0);
+  }
 }
 
-// ========================================
 // 10. LINE GRAPH
-// ========================================
 
-const chartSelect =
-  document.getElementById("chartParameter");
+const chartSelect = document.getElementById("chartParameter");
 
-parameters.forEach((p, i) => {
-  const option = document.createElement("option");
+if (chartSelect) {
+  parameters.forEach((p, i) => {
+    const option = document.createElement("option");
 
-  option.value = String(i);
-  option.textContent =
-    `${p.uz} (${p.code}, ${p.unit})`;
+    option.value = String(i);
+    option.textContent = `${p.uz} (${p.code}, ${p.unit})`;
 
-  chartSelect.appendChild(option);
-});
+    chartSelect.appendChild(option);
+  });
 
-chartSelect.value = "7";
+  chartSelect.value = "7";
+}
 
 function drawTrendChart() {
   const canvas = document.getElementById("trendChart");
+
+  if (!canvas || !chartSelect) return;
+
   const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
   const width = Math.max(
     300,
@@ -428,10 +376,7 @@ function drawTrendChart() {
   );
 
   const height = 230;
-  const dpr = Math.min(
-    window.devicePixelRatio || 1,
-    2
-  );
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -465,9 +410,7 @@ function drawTrendChart() {
 
   const X = i =>
     left + (right - left) *
-    (data.length === 1
-      ? 0.5
-      : i / (data.length - 1));
+    (data.length === 1 ? 0.5 : i / (data.length - 1));
 
   const Y = value =>
     bottom -
@@ -480,8 +423,7 @@ function drawTrendChart() {
   ctx.lineWidth = 1;
 
   for (let t = 0; t <= 4; t++) {
-    const y =
-      top + (bottom - top) * t / 4;
+    const y = top + (bottom - top) * t / 4;
 
     ctx.beginPath();
     ctx.moveTo(left, y);
@@ -495,11 +437,7 @@ function drawTrendChart() {
     );
   }
 
-  ctx.fillText(
-    data[0].time.slice(11),
-    left,
-    height - 8
-  );
+  ctx.fillText(data[0].time.slice(11), left, height - 8);
 
   ctx.textAlign = "right";
 
@@ -534,97 +472,207 @@ function drawTrendChart() {
   ctx.fill();
 }
 
-// ========================================
 // 11. DASHBOARDNI YANGILASH
-// ========================================
 
 function updateDashboard() {
   showCards();
 
-  showTable(
-    document.getElementById("search").value
-  );
+  const search = document.getElementById("search");
+  showTable(search ? search.value : "");
 
-  document.getElementById("lastUpdated").textContent =
-    records[0].time;
+  const updated = document.getElementById("lastUpdated");
+
+  if (updated) {
+    updated.textContent =
+      records[0]?.time || "Ma'lumot kutilmoqda";
+  }
 
   checkAlerts();
   drawTrendChart();
 }
 
 function updateCountdown() {
-  document.getElementById("countdown").textContent =
-    demoRunning
-      ? Math.max(
-          0,
-          Math.ceil((nextTick - Date.now()) / 1000)
-        ) + " s"
-      : "To'xtatilgan";
+  const el = document.getElementById("countdown");
+
+  if (el) {
+    el.textContent = pollingEnabled
+      ? "10 s"
+      : "To‘xtatilgan";
+  }
 }
 
-function setDemoRunning(running) {
-  demoRunning = running;
-  nextTick = Date.now() + DEMO_INTERVAL_MS;
+function setPolling(enabled) {
+  pollingEnabled = enabled;
 
-  document.getElementById("pauseBtn").hidden = !running;
-  document.getElementById("resumeBtn").hidden = running;
+  const pause = document.getElementById("pauseBtn");
+  const resume = document.getElementById("resumeBtn");
+  const mode = document.getElementById("modeLabel");
+  const status = document.getElementById("monitoringText");
 
-  document.getElementById("modeLabel").textContent =
-    running
-      ? "DEMO • Avtomatik monitoring"
-      : "DEMO • To'xtatilgan";
+  if (pause) pause.hidden = !enabled;
+  if (resume) resume.hidden = enabled;
 
-  document.getElementById("monitoringText").textContent =
-    running
-      ? "Demo ma'lumotlar avtomatik yangilanmoqda"
-      : "Demo yangilanishi to'xtatilgan";
+  if (mode) {
+    mode.textContent = enabled
+      ? "JSON • Monitoring"
+      : "JSON • To‘xtatilgan";
+  }
 
-  updateCountdown();
-}
-
-// ========================================
-// 12. TUGMALAR VA ISHGA TUSHIRISH
-// ========================================
-
-document.getElementById("search")
-  .addEventListener("input", e => {
-    showTable(e.target.value);
-  });
-
-document.getElementById("addBtn")
-  .addEventListener("click", addMeasurement);
-
-document.getElementById("exportBtn")
-  .addEventListener("click", exportCSV);
-
-document.getElementById("pauseBtn")
-  .addEventListener("click", () => {
-    setDemoRunning(false);
-  });
-
-document.getElementById("resumeBtn")
-  .addEventListener("click", () => {
-    setDemoRunning(true);
-  });
-
-chartSelect.addEventListener(
-  "change",
-  drawTrendChart
-);
-
-window.addEventListener(
-  "resize",
-  drawTrendChart
-);
-
-setInterval(() => {
-  if (demoRunning && Date.now() >= nextTick) {
-    demoMeasurement();
-    nextTick = Date.now() + DEMO_INTERVAL_MS;
+  if (status) {
+    status.textContent = enabled
+      ? "JSON manbasidan o‘qilmoqda"
+      : "Avtomatik o‘qish to‘xtatilgan";
   }
 
   updateCountdown();
-}, 250);
+}
 
+// 12. JSON FAYLDAN MA'LUMOT OLISH
+
+async function loadMeasurements() {
+  try {
+    const response = await fetch(
+      API_URL + "?t=" + Date.now(),
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
+
+    const payload = await response.json();
+
+    const items = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload.measurements)
+        ? payload.measurements
+        : [payload];
+
+    const incoming = items
+      .map(normalizeMeasurement)
+      .filter(Boolean);
+
+    if (!incoming.length) {
+      throw new Error(
+        "JSON ichida yaroqli o‘lchov topilmadi"
+      );
+    }
+
+    for (const record of incoming) {
+      const exists = records.some(
+        r => r.id === record.id &&
+             r.timestamp === record.timestamp
+      );
+
+      if (!exists) {
+        records.push(record);
+      }
+    }
+
+    records.sort(
+      (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
+    );
+
+    records.length = Math.min(records.length, MAX_RECORDS);
+    lastFetchAt = Date.now();
+
+    const status = document.getElementById("monitoringText");
+
+    if (status) {
+      status.textContent =
+        "JSON o‘qildi • " +
+        formatDate(new Date(lastFetchAt)) +
+        " (yangi sensor o‘lchovi kelganini anglatmaydi)";
+    }
+
+    updateDashboard();
+  } catch (error) {
+    console.error("JSON yuklash xatosi:", error);
+
+    const status = document.getElementById("monitoringText");
+
+    if (status) {
+      status.textContent =
+        "JSON yuklanmadi: " + error.message;
+    }
+  }
+}
+
+// 13. TUGMALAR VA ISHGA TUSHIRISH
+
+function on(id, event, handler) {
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.addEventListener(event, handler);
+  }
+}
+
+on("search", "input", e => showTable(e.target.value));
+on("addBtn", "click", addMeasurement);
+on("exportBtn", "click", exportCSV);
+
+on("pauseBtn", "click", () => setPolling(false));
+
+on("resumeBtn", "click", () => {
+  setPolling(true);
+  loadMeasurements();
+});
+
+if (chartSelect) {
+  chartSelect.addEventListener("change", drawTrendChart);
+}
+
+window.addEventListener("resize", drawTrendChart);
+
+setInterval(() => {
+  if (pollingEnabled) {
+    loadMeasurements();
+  }
+}, POLL_INTERVAL_MS);
+
+setPolling(true);
 updateDashboard();
-updateCountdown();
+loadMeasurements();
+// Qurilma holatini tekshirish
+async function checkDeviceStatus() {
+    const status = document.getElementById("deviceStatus");
+
+    if (!status) return;
+
+    try {
+        const response = await fetch("./api/measurements.json", {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("Ma'lumot olinmadi");
+        }
+
+        const data = await response.json();
+        const lastTime = new Date(data.timestamp).getTime();
+
+        // Oxirgi o'lchov 30 soniyadan eski bo'lmasligi kerak
+        const isOnline =
+            Number.isFinite(lastTime) &&
+            lastTime <= Date.now() &&
+            Date.now() - lastTime <= 30000;
+
+        if (isOnline) {
+            status.textContent = "● ONLINE";
+            status.style.color = "#16a34a";
+        } else {
+            status.textContent = "● OFFLINE";
+            status.style.color = "#dc2626";
+        }
+
+    } catch (error) {
+        status.textContent = "● OFFLINE";
+        status.style.color = "#dc2626";
+        console.error(error);
+    }
+}
+
+// Har 5 soniyada tekshirish
+checkDeviceStatus();
+setInterval(checkDeviceStatus, 5000);
