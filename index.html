@@ -13,17 +13,51 @@
 <header class="topbar">
   <div>
     <h1>Noosfera hududining monitoringi</h1>
-    <p>Environmental Monitoring System (EMS) •
-       Gidrofizik va gidrokimyoviy ko'rsatkichlar •
-       10 parametr</p>
+    <p>
+      Environmental Monitoring System (EMS) •
+      Gidrofizik va gidrokimyoviy ko'rsatkichlar •
+      10 parametr
+    </p>
   </div>
-  <div class="operator">Operator: <b>Jamshidbek</b></div>
+  <div class="operator">
+    Operator: <b>Jamshidbek</b>
+  </div>
 </header>
 
 <main>
+  <!-- AVTOMATIK MONITORING HOLATI -->
+  <section class="panel live-strip">
+    <div>
+      <strong id="modeLabel">
+        DEMO • Avtomatik monitoring
+      </strong>
+      <small>Har 5 soniyada yangilanadi</small>
+    </div>
+
+    <div>
+      <span class="muted">Oxirgi yangilanish</span>
+      <strong id="lastUpdated">—</strong>
+    </div>
+
+    <div>
+      <span class="muted">Keyingi yangilanish</span>
+      <strong id="countdown">5 s</strong>
+    </div>
+
+    <div class="live-actions">
+      <button id="pauseBtn">⏸ To'xtatish</button>
+      <button id="resumeBtn" hidden>
+        ▶ Davom ettirish
+      </button>
+    </div>
+  </section>
+
+  <!-- 10 TA PARAMETR -->
   <section class="cards" id="parameters"></section>
 
+  <!-- JADVAL VA QURILMA MA'LUMOTLARI -->
   <div class="layout">
+
     <section class="panel">
       <h2>O'lchash natijalari</h2>
       <p class="subtitle">
@@ -31,8 +65,11 @@
       </p>
 
       <div class="toolbar">
-        <input type="search" id="search"
-          placeholder="Sana yoki qiymat bo'yicha qidirish">
+        <input
+          type="search"
+          id="search"
+          placeholder="Sana yoki qiymat bo'yicha qidirish"
+        >
         <button id="exportBtn">CSV eksport</button>
         <button id="addBtn">Yangi o'lchov kiritish</button>
       </div>
@@ -53,7 +90,7 @@
               <th>TDS (mg/L)</th>
               <th>ECe (dS/m)</th>
               <th>ECs (µS/cm)</th>
-              <th>Data Quality</th>
+              <th>Water Quality</th>
             </tr>
           </thead>
           <tbody id="results"></tbody>
@@ -66,38 +103,47 @@
     <aside>
       <section class="panel">
         <h2>Qurilma tafsilotlari</h2>
+
         <div class="detail">
           <span>Device Status</span>
-          <strong class="offline">● OFFLINE</strong>
+          <strong class="demo-status">
+            ● DEMO • Qurilma ulanmagan
+          </strong>
         </div>
+
         <div class="detail">
           <span>Device Type</span>
           <b>IoT Monitoring Node</b>
         </div>
+
         <div class="detail">
           <span>Controller</span>
           <b>ESP32</b>
         </div>
+
         <div class="detail">
           <span>Parameters</span>
           <b>10</b>
         </div>
+
         <div class="detail">
           <span>Data Source</span>
-          <b>Simulated Data</b>
+          <b>Simulyatsiya</b>
         </div>
+
         <div class="detail">
           <span>Update Mode</span>
-          <b>Manual / API</b>
+          <b>Har 5 soniyada</b>
         </div>
       </section>
 
       <section class="panel">
         <h2>Monitoring holati</h2>
-        <p><span class="dot"></span> Demo ma'lumotlar</p>
-        <p>Data Quality: <b>SIMULATED</b></p>
+        <p id="monitoringText">
+          Demo ma'lumotlar yangilanmoqda
+        </p>
         <p>Monitoring Parameters: <b>10</b></p>
-        <p>Database: <b>Not Connected</b></p>
+        <p>Database: <b>Ulanmagan</b></p>
       </section>
 
       <section class="panel">
@@ -109,7 +155,39 @@
         <p>dS/m — decisiemens per meter</p>
       </section>
     </aside>
+
   </div>
+
+  <!-- OGОHLANTIRISHLAR -->
+  <section class="panel alerts-panel" id="alerts">
+    <h2>Monitoring ogohlantirishlari</h2>
+    <p id="alertText">Parametrlar tekshirilmoqda...</p>
+  </section>
+
+  <!-- LINE GRAPH: JADVALDAN KEYIN -->
+  <section class="panel chart-panel">
+    <div class="chart-heading">
+      <div>
+        <h2>Parametrlarning vaqt bo'yicha o'zgarishi</h2>
+        <p class="subtitle">
+          Line Graph • Oxirgi 40 ta o'lchov
+        </p>
+      </div>
+
+      <label for="chartParameter">
+        Ko'rsatkich:
+        <select id="chartParameter"></select>
+      </label>
+    </div>
+
+    <canvas
+      id="trendChart"
+      height="230"
+      role="img"
+      aria-label="Monitoring parametrlari grafigi">
+    </canvas>
+  </section>
+
 </main>
 
 <footer>
